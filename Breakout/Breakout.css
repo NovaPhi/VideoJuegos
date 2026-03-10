@@ -1,0 +1,17 @@
+body {
+    margin: 0;
+    background: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+canvas {
+    background-image: url("background.png");
+    background-size: cover;    
+    background-position: center; 
+    background-repeat: no-repeat;
+    display: block;
+    cursor: none;
+}
