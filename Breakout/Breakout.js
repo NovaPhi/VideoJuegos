@@ -10,12 +10,14 @@ const canvasWidth = 1000;
 const canvasHeight = 750;
 const paddleSpeed = 7;
 
+// Grid dimensions for the block layout
 const BLOCK_COLS = 12;
 const BLOCK_ROWS = 4;
 
 let ctx;
 let game;
 
+// Handles the ball's position, movement, and rendering
 class Ball {
     constructor() {
         this.radius = 15;
@@ -24,6 +26,7 @@ class Ball {
         this.reset();
     }
 
+    // Returns ball to starting position with default velocity
     reset() {
         this.x = canvasWidth / 2;
         this.y = canvasHeight - 120;
@@ -31,6 +34,7 @@ class Ball {
         this.vy = -10;
     }
 
+    // Moves the ball and bounces off left, right, and top walls
     update() {
         this.x += this.vx;
         this.y += this.vy;
@@ -39,10 +43,12 @@ class Ball {
         if (this.y - this.radius < 0)           { this.y = this.radius;               this.vy *= -1; }
     }
 
+    // Returns true if the ball has fallen below the canvas
     isLost() {
         return this.y - this.radius > canvasHeight;
     }
 
+    // Draws the ball sprite, falls back to a white circle if image not loaded
     draw(ctx) {
         if (this.image && this.image.complete && this.image.naturalWidth > 0) {
             ctx.drawImage(this.image, this.x - this.radius, this.y - this.radius, this.radius * 2, this.radius * 2);
@@ -55,6 +61,7 @@ class Ball {
     }
 }
 
+// Handles the player-controlled paddle
 class Paddle {
     constructor() {
         this.width = 200;
@@ -65,17 +72,20 @@ class Paddle {
         this.setSprite("paddle.png");
     }
 
+    // Loads a sprite image for the paddle
     setSprite(path) {
         this.image = new Image();
         this.image.src = path;
     }
 
+    // Moves the paddle based on A/D keys, clamped within canvas bounds
     update() {
         if (this.keys.left)  this.x -= paddleSpeed;
         if (this.keys.right) this.x += paddleSpeed;
         this.x = Math.max(0, Math.min(canvasWidth - this.width, this.x));
     }
 
+    // Returns true if the ball is colliding with the paddle
     isHit(ball) {
         return (
             ball.y + ball.radius >= this.y &&
@@ -85,6 +95,7 @@ class Paddle {
         );
     }
 
+    // Draws the paddle sprite, falls back to a blue rectangle if image not loaded
     draw(ctx) {
         if (this.image && this.image.complete && this.image.naturalWidth > 0) {
             ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
@@ -95,6 +106,7 @@ class Paddle {
     }
 }
 
+// Represents a single destructible block in the grid
 class Block {
     constructor(x, y) {
         this.x = x;
@@ -104,11 +116,13 @@ class Block {
         this.alive = true;
     }
 
+    // Loads a sprite image for the block
     setSprite(path) {
         this.image = new Image();
         this.image.src = path;
     }
 
+    // Returns true if the ball hit this block, destroys it and bounces the ball
     checkHit(ball) {
         if (!this.alive) return false;
         if (
@@ -124,6 +138,7 @@ class Block {
         return false;
     }
 
+    // Draws the block sprite, falls back to a red rectangle if image not loaded
     draw(ctx) {
         if (!this.alive) return;
         if (this.image && this.image.complete && this.image.naturalWidth > 0) {
@@ -135,6 +150,7 @@ class Block {
     }
 }
 
+// Main game class — manages state, objects, input, and the game loop logic
 class Game {
     constructor() {
         this.ball    = new Ball();
@@ -150,6 +166,7 @@ class Game {
         this.createEventListeners();
     }
 
+    // Populates the blocks array in a grid using BLOCK_COLS and BLOCK_ROWS
     buildBlocks() {
         const cols = BLOCK_COLS, rows = BLOCK_ROWS;
         const blockW = 70, blockH = 22;
@@ -167,6 +184,7 @@ class Game {
         }
     }
 
+    // Starts the game from the waiting screen, or resets everything after win/loss
     startOrRestart() {
         if (this.waiting) {
             this.waiting = false;
@@ -183,6 +201,7 @@ class Game {
         }
     }
 
+    // Registers keyboard events for paddle movement and spacebar to start/restart
     createEventListeners() {
         window.addEventListener("keydown", (e) => {
             if (e.code === "Space") this.startOrRestart();
@@ -195,24 +214,28 @@ class Game {
         });
     }
 
+    // Updates all game objects and checks collisions, win, and loss conditions
     update() {
         if (this.waiting || this.over || this.won) return;
 
         this.paddle.update();
         this.ball.update();
 
+        // Bounce ball off paddle with spin based on hit position
         if (this.paddle.isHit(this.ball)) {
             this.ball.vy = -Math.abs(this.ball.vy);
             const hitPos = (this.ball.x - this.paddle.x) / this.paddle.width;
             this.ball.vx = (hitPos - 0.5) * 8;
         }
 
+        // Check ball against every block
         for (const block of this.blocks) {
             if (block.checkHit(this.ball)) {
                 this.blocksDestroyed++;
             }
         }
 
+        // Lose a life if ball falls off the bottom
         if (this.ball.isLost()) {
             this.lives--;
             if (this.lives <= 0) {
@@ -222,11 +245,13 @@ class Game {
             }
         }
 
+        // Win when all blocks are destroyed
         if (this.blocks.every(b => !b.alive)) {
             this.won = true;
         }
     }
 
+    // Draws all game objects, the HUD, and any active overlay
     draw(ctx) {
         ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
@@ -234,6 +259,7 @@ class Game {
         this.paddle.draw(ctx);
         this.ball.draw(ctx);
 
+        // HUD: lives and block counter
         ctx.fillStyle = "black";
         ctx.font = "16px monospace";
         ctx.textAlign = "left";
@@ -249,6 +275,7 @@ class Game {
         }
     }
 
+    // Draws a semi-transparent overlay with a title and subtitle
     drawOverlay(title, subtitle, color) {
         ctx.fillStyle = "rgba(86, 196, 230, 0.6)";
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
@@ -262,6 +289,7 @@ class Game {
     }
 }
 
+// Initializes the canvas and starts the game
 function main() {
     const canvas = document.getElementById("canvas");
     canvas.width  = canvasWidth;
@@ -271,6 +299,7 @@ function main() {
     loop();
 }
 
+// Main loop — called every frame via requestAnimationFrame
 function loop() {
     game.update();
     game.draw(ctx);
